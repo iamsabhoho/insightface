@@ -18,6 +18,7 @@ from swagger_client.models import *
 VERSION = "v1.0"
 # path to the query npy file
 SEARCH_PATH = "/home/public/face-gen/query_embedding.npy"
+#SEARCH_PATH = "/home/public/ramdisk/query_embedding.npy"
 
 def configure(host="localhost", port=7760, alloc="fvs-automation"):
     config = swagger_client.Configuration()
@@ -42,11 +43,14 @@ def face_search(dataset_id, query, topk, verbose=False):
     search_apis = swagger_client.SearchApi(api_config)
     alloc = api_config.default_headers["allocationToken"]
     if verbose: print("%s: starting search" % sys.argv[0])
+    start_time = datetime.now()
     response = search_apis.controllers_search_controller_search(
         SearchRequest(allocation_id=alloc, dataset_id=dataset_id, queries_file_path=query, topk=topk),
         alloc)
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
     if verbose: print("%s: done searching" % sys.argv[0])
-    return response
+    return response, duration
 
 
 #
