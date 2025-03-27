@@ -3,3 +3,5 @@ numpy
 insightface
 onnxruntime
 tqdm
+faiss-cpu
+fiftyone

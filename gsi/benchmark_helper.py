@@ -304,7 +304,7 @@ def fvs_search(df, test_mode=False, top_k=10):
     total = 0
     top_k_metrics = {1: 0, 3: 0, 10: 0}
     top_k_failures = {1: [], 3: [], 10: []}
-    search_time = []
+    inner_search_time, outer_search_time = [], []
 
     if test_mode:
         print("##### test mode #####")
@@ -318,15 +318,20 @@ def fvs_search(df, test_mode=False, top_k=10):
         query_emb = df['embedding'].iloc[query_idx]
 
         if df[df.ID == query_id].shape[0] == 1:
-            continue  # Skip singletons
+            continue
 
         total += 1
         query_emb = query_emb.reshape((1, -1))
 
+        # we capture 2 latency: outer and inner
+        # inner latency: captures latency of FVS call inside face_search(), use to report on benchmarks
+        # outer latency: see below, which includes converting query array into a file required by fvs api
+        # see implementation of face_search() in this directory
         start_time = datetime.now()
-        response = fvs.face_search("56d7e7b2-4c17-47a9-b247-3710120b5466", query_emb, top_k, verbose=False)
+        response, duration = fvs.face_search("d4b33d5c-0719-411b-ace4-8b5ff8b4004c", query_emb, top_k, verbose=False)
         end_time = datetime.now()
-        search_time.append((end_time - start_time).total_seconds())
+        inner_search_time.append(duration)
+        outer_search_time.append((end_time - start_time).total_seconds())
 
         top_k_indices = response.indices[0][1:]  # Skip top-1 (self-match)
         top_k_scores = [float(x) for x in response.distance[0][1:]]
@@ -372,12 +377,16 @@ def fvs_search(df, test_mode=False, top_k=10):
             })
 
     # Final Reporting
+    inner_latency = np.median(inner_search_time) * 1000
+    outer_latency = np.median(outer_search_time) * 1000
+
     metrics = {
         'index_type': 'fvs',
         'top1_acc': top_k_metrics[1] / total,
         'top3_acc': top_k_metrics[3] / total,
         'top10_acc': top_k_metrics[10] / total,
-        'median_latency_ms': np.median(search_time) * 1000,
+        'med_inner_latency': np.median(inner_latency) * 1000,
+        'med_outer_latency': np.median(outer_latency) * 1000,
         'top1_failures': top_k_failures[1],
         'top3_failures': top_k_failures[3],
         'top10_failures': top_k_failures[10]
@@ -387,6 +396,7 @@ def fvs_search(df, test_mode=False, top_k=10):
     for k in [1, 3, 10]:
         print(f"Top-{k} Accuracy: {metrics[f'top{k}_acc']:.4f}")
         print(f"Top-{k} Failures: {len(metrics[f'top{k}_failures'])}")
-    print(f"Median Query Time: {metrics['median_latency_ms']:.2f} ms")
+    print(f"Median Inner Search Time FVS: {inner_latency}")
+    print(f"Median Outer Search Time FVS: {outer_latency}")
 
     return metrics

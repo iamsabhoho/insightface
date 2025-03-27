@@ -17,8 +17,8 @@ from swagger_client.models import *
 # swagger version flag
 VERSION = "v1.0"
 # path to the query npy file
-SEARCH_PATH = "/home/public/face-gen/query_embedding.npy"
-#SEARCH_PATH = "/home/public/ramdisk/query_embedding.npy"
+#SEARCH_PATH = "/home/public/face-gen/query_embedding.npy"
+SEARCH_PATH = "/home/public/ramdisk/query_embedding.npy"
 
 def configure(host="localhost", port=7760, alloc="fvs-automation"):
     config = swagger_client.Configuration()
